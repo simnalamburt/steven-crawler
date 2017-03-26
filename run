@@ -1,3 +1,38 @@
 #!/usr/bin/env node
-console.log('Hi');
+'use strict';
 
+const fetch = require('node-fetch');
+const jsdom = require('jsdom').jsdom;
+
+(async _ => {
+  const base_url = 'https://bravebold.tistory.com'
+
+  for (let i = 1;; i += 1) {
+    const url = `${base_url}/category/%EC%8A%A4%ED%8B%B0%EB%B8%90%20%EC%9C%A0%EB%8B%88%EB%B2%84%EC%8A%A4?page=${i}`;
+
+    const res = await fetch(url);
+    const body = await res.text();
+    const document = jsdom(body);
+
+    const posts = [...document.querySelectorAll('div.list_content > a.link_post')]
+    const is_last_page = document.querySelector('div.area_paging a.btn_next').classList.contains('no-more-next');
+
+    posts.forEach(async dom => {
+      const url = base_url + dom.href;
+      const title = dom.querySelector('a.link_post > strong.tit_post').textContent;
+
+      const res = await fetch(url);
+      const body = await res.text();
+      const document = jsdom(body);
+      const links = [...document.querySelectorAll('iframe')].map(x => x.src);
+
+      if (links.length <= 0) { return; }
+
+      console.log(title);
+      links.forEach(x => console.log(x));
+      console.log();
+    });
+
+    if (is_last_page) { break; }
+  }
+})();
