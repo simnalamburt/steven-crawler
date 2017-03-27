@@ -3,7 +3,7 @@ Steven crawler
 It crawls the URLs of Steven Universe from [bravebold.tistory.com]. Requires
 Node.js v7.0+
 
-![Pearl](https://i.imgur.com/3BgE5BA.png)
+![Pearl](http://i.imgur.com/y4J5iKr.png)
 
 ```bash
 ./run | tee output
