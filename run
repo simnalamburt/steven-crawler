@@ -3,6 +3,8 @@
 
 const fetch = require('node-fetch');
 const jsdom = require('jsdom').jsdom;
+const Promise = require('bluebird');
+const fs = Promise.promisifyAll(require('fs'));
 
 (async _ => {
   const base_url = 'https://bravebold.tistory.com'
@@ -37,13 +39,14 @@ const jsdom = require('jsdom').jsdom;
     if (is_last_page) { break; }
   }
 
-  const data = await Promise.all(promises);
-  for (const { title, links } of data) {
-    if (links.length <= 0) { continue; }
+  const data = (await Promise.all(promises)).filter(a => a.links.length > 0);
+  const bytes = JSON.stringify(data);
+  await fs.writeFileAsync('data.json', bytes);
+  console.log(`\
+크롤링 완료!
 
-    console.log(title);
-    links.forEach(x => console.log(x));
-    console.log();
-  }
+게시물 수 : ${data.length}
+동영상 수 : ${data.reduce((acc, {links}) => acc += links.length, 0)}\
+`);
 })()
 .catch(e => console.error(e.stack));
