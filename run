@@ -6,10 +6,13 @@ const jsdom = require('jsdom').jsdom;
 const Promise = require('bluebird');
 const fs = Promise.promisifyAll(require('fs'));
 
-(async _ => {
+main().catch(e => console.error(e.stack));
+
+async function main() {
+  console.log('크롤링 시작 ...');
+
   const base_url = 'https://bravebold.tistory.com'
   const promises = [];
-
   for (let i = 1;; i += 1) {
     const url = `${base_url}/category/%EC%8A%A4%ED%8B%B0%EB%B8%90%20%EC%9C%A0%EB%8B%88%EB%B2%84%EC%8A%A4?page=${i}`;
 
@@ -42,11 +45,11 @@ const fs = Promise.promisifyAll(require('fs'));
   const data = (await Promise.all(promises)).filter(a => a.links.length > 0);
   const bytes = JSON.stringify(data);
   await fs.writeFileAsync('data.json', bytes);
+
   console.log(`\
 크롤링 완료!
 
 게시물 수 : ${data.length}
 동영상 수 : ${data.reduce((acc, {links}) => acc += links.length, 0)}\
 `);
-})()
-.catch(e => console.error(e.stack));
+}
