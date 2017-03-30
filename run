@@ -6,15 +6,23 @@ const jsdom = require('jsdom').jsdom;
 const Koa = require('koa');
 const Promise = require('bluebird');
 const fs = Promise.promisifyAll(require('fs'));
+const spawn = require('child_process').spawn;
 
-main().catch(e => console.error(e.stack));
+//
+// Constants
+//
+const cacheName = 'data.json';
+const port = 3000;
 
+//
+// Main logic
+//
 async function read() {
-  const fd = await fs.openAsync('data.json', fs.constants.O_RDWR | fs.constants.O_CREAT);
+  const fd = await fs.openAsync(cacheName, fs.constants.O_RDWR | fs.constants.O_CREAT);
   const bytes = await fs.readFileAsync(fd);
   try {
     const data = JSON.parse(bytes);
-    console.log('캐시 사용');
+    console.log('캐시 사용\n');
     return data;
   } catch(e) { }
 
@@ -57,10 +65,38 @@ async function read() {
 
   console.log(`\
 크롤링 완료!
-
-게시물 수 : ${data.length}
-동영상 수 : ${data.reduce((acc, {links}) => acc += links.length, 0)}`);
+  게시물 수 : ${data.length}
+  동영상 수 : ${data.reduce((acc, {links}) => acc += links.length, 0)}
+`);
   return data;
+}
+
+function exec(exe, args) {
+  return new Promise((resolve, reject) => {
+    const process = spawn(exe, args);
+
+    const stdout = [], stderr = [];
+    process.stdout.on('data', data => stdout.push(data));
+    process.stderr.on('data', data => stderr.push(data));
+    process.on('close', code => {
+      const data = {
+        code,
+        stdout: Buffer.concat(stdout),
+        stderr: Buffer.concat(stderr),
+      };
+
+      if (code === 0) {
+        resolve(data);
+      } else {
+        reject(new Error(data));
+      }
+    });
+  });
+}
+
+async function getIP() {
+  const data = await exec('dig', ['+short', 'myip.opendns.com', '@resolver1.opendns.com']);
+  return data.stdout.toString().trim();
 }
 
 async function main() {
@@ -85,5 +121,9 @@ async function main() {
 </body>
 </html>`;
   });
-  app.listen(3000);
+  app.listen(port);
+
+  console.log(`See \x1b[33mhttp://${await getIP()}:${port}\x1b[0m`);
 }
+
+main().catch(e => console.error(e.stack));
