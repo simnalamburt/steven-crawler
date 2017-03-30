@@ -3,12 +3,22 @@
 
 const fetch = require('node-fetch');
 const jsdom = require('jsdom').jsdom;
+const Koa = require('koa');
 const Promise = require('bluebird');
 const fs = Promise.promisifyAll(require('fs'));
 
 main().catch(e => console.error(e.stack));
 
-async function main() {
+async function read() {
+  const fd = await fs.openAsync('data.json', fs.constants.O_RDWR | fs.constants.O_CREAT);
+  const bytes = await fs.readFileAsync(fd);
+  try {
+    const data = JSON.parse(bytes);
+    console.log('캐시 사용');
+    return data;
+  } catch(e) { }
+
+  // Local cache does not exist. Crawling...
   console.log('크롤링 시작 ...');
 
   const base_url = 'https://bravebold.tistory.com'
@@ -43,13 +53,37 @@ async function main() {
   }
 
   const data = (await Promise.all(promises)).filter(a => a.links.length > 0);
-  const bytes = JSON.stringify(data);
-  await fs.writeFileAsync('data.json', bytes);
+  await fs.writeFileAsync(fd, JSON.stringify(data));
 
   console.log(`\
 크롤링 완료!
 
 게시물 수 : ${data.length}
-동영상 수 : ${data.reduce((acc, {links}) => acc += links.length, 0)}\
-`);
+동영상 수 : ${data.reduce((acc, {links}) => acc += links.length, 0)}`);
+  return data;
+}
+
+async function main() {
+  const data = await read();
+  const app = new Koa();
+  app.use(ctx => {
+    ctx.body = `\
+<!doctype html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Steven crawler</title>
+</head>
+<body>
+  <h1>크롤링 결과</h1>
+  ${data.reverse().map(({ title, links }) => `
+  <h3>${title}</h3>
+  <p>\
+    ${links.map(l => `
+    <a href="${l}">${l}</a>`).join('<br>')}
+  </p>`).join('')}
+</body>
+</html>`;
+  });
+  app.listen(3000);
 }
