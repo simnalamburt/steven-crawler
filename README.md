@@ -6,10 +6,10 @@ Node.js v7.0+
 ![Pearl](http://i.imgur.com/y4J5iKr.png)
 
 ```bash
-./run | tee output
+./run
 
 # If you're using node < v7.6
-node --harmony-async-await run | tee output
+node --harmony-async-await run
 ```
 
 <br>
